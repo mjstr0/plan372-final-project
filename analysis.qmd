@@ -20,7 +20,38 @@ library(here)
 options(tigris_use_cache = TRUE)
 ```
 
+## Data
+```{r}
+#| label: load-data
+#| message: false
+#| warning: false
 
+# Load ACS median home value data
+home_value_raw = read_csv(here("data", "ACSDT5Y2024.B25077-Data.csv"))
 
+# Load ACS median household income data
+income_raw = read_csv(here("data", "ACSST5Y2024.S1901-Data.csv"))
+
+# Load Wake County census tract boundaries
+wake_tracts = tracts(
+  state = "NC",
+  county = "Wake",
+  year = 2024,
+  cb = TRUE
+) |>
+  st_transform(32119)
+```
+
+```{r}
+#| label: check-data
+
+# Check the first few rows of each dataset
+head(home_value_raw)
+head(income_raw)
+
+# Check column names so we can identify the correct variables
+names(home_value_raw)
+names(income_raw)
+```
 ```{r}
 ```
