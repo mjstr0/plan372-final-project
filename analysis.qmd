@@ -16,6 +16,7 @@ library(sf)
 library(tidycensus)
 library(tigris)
 library(here)
+library(ggspatial)
 
 options(tigris_use_cache = TRUE)
 ```
@@ -43,8 +44,6 @@ wake_tracts = tracts(
 ```
 
 ```{r}
-#| label: check-data
-
 # Check the first few rows of each dataset
 head(home_value_raw)
 head(income_raw)
@@ -59,8 +58,6 @@ This keeps only the columns we need: census tract ID, median home value, and med
 
 
 ```{r}
-#| label: clean-acs-data
-
 home_values_clean = home_value_raw |>
   filter(GEO_ID != "Geography") |>
   mutate(
@@ -88,8 +85,6 @@ acs_data = home_values_clean |>
 This gets Wake County census tract shapes so we can make maps and connect the ACS data to geography.
 
 ```{r}
-#| label: load-tracts
-
 wake_tracts = tracts(
   state = "NC",
   county = "Wake",
@@ -106,10 +101,7 @@ raleigh_tracts = wake_tracts |>
 
 Your parks CSV is separated by semicolons, so this uses `read.csv()` with `sep = ";"`.
 
-```r
 ```{r}
-#| label: load-parks
-
 parks = read.csv(
   here("data", "Parks_-7279106479596582801.csv"),
   sep = ";"
@@ -118,8 +110,241 @@ parks = read.csv(
 head(parks)
 ```
 
+## 6. Clean parks data and convert to spatial data
 
+```{r}
+parks_clean = parks |>
+  filter(!is.na(Point...Latitude)) |>
+  filter(!is.na(Point...Longitude)) |>
+  mutate(
+    latitude = as.numeric(Point...Latitude),
+    longitude = as.numeric(Point...Longitude),
+    acres = as.numeric(Map.Acres)
+  )
+
+parks_sf = st_as_sf(
+  parks_clean,
+  coords = c("longitude", "latitude"),
+  crs = 4326
+)
+
+parks_sf = parks_sf |>
+  st_transform(2264)
+```
+
+---
+
+## 7. Create a 1-mile park access measure
+
+This creates a 1-mile buffer around each park. Then it checks whether each census tract intersects a park buffer.
+
+This is easier than measuring exact distance and uses the same type of spatial method from class.
+
+```{r}
+parks_buffer = parks_sf |>
+  st_buffer(5280)
+
+raleigh_tracts$near_park = apply(
+  st_intersects(raleigh_tracts, parks_buffer),
+  1,
+  any
+)
+
+raleigh_tracts = raleigh_tracts |>
+  mutate(
+    near_park_text = case_match(
+      near_park,
+      TRUE ~ "Within 1 mile of park",
+      FALSE ~ "More than 1 mile from park"
+    )
+  )
+```
+## 8. Check the final analysis data
+
+```{r}
+
+analysis_data = raleigh_tracts |>
+  st_drop_geometry() |>
+  select(
+    GEOID,
+    NAME.x,
+    median_home_value,
+    median_household_income,
+    near_park,
+    near_park_text
+  ) |>
+  filter(!is.na(median_home_value)) |>
+  filter(!is.na(median_household_income))
+
+head(analysis_data)
+
+nrow(analysis_data)
+
+```
+
+## 9. Descriptive statistics table
+```{r}
+#| label: descriptive-table
+
+summary_table = analysis_data |>
+  group_by(near_park_text) |>
+  summarize(
+    tract_count = n(),
+    average_home_value = mean(median_home_value, na.rm = TRUE),
+    average_income = mean(median_household_income, na.rm = TRUE)
+  )
+
+summary_table
+```
+
+## 10. Map of median home values
+
+```{r}
+#| label: home-value-map
+#| fig-cap: "Median home values by census tract in Wake County, North Carolina."
+
+ggplot() +
+  layer_spatial(raleigh_tracts, aes(fill = median_home_value)) +
+  layer_spatial(parks_sf) +
+  annotation_scale() +
+  scale_fill_binned() +
+  labs(
+    title = "Median Home Values and Raleigh Parks",
+    fill = "Median Home Value"
+  ) +
+  theme_minimal()
+```
+
+## 11. Map of tracts within 1 mile of a park
+
+```{r}
+#| label: park-access-map
+#| fig-cap: "Census tracts classified by whether they are within one mile of a Raleigh park."
+
+ggplot() +
+  layer_spatial(raleigh_tracts, aes(fill = near_park_text)) +
+  layer_spatial(parks_sf) +
+  annotation_scale() +
+  labs(
+    title = "Access to Raleigh Parks",
+    fill = "Park Access"
+  ) +
+  theme_minimal()
+```
+
+
+## 12. Bar chart comparing home values by park access
 
 
 ```{r}
+#| label: park-access-bar-chart
+#| fig-cap: "Average median home value by park access category."
+
+ggplot(summary_table, aes(x = near_park_text, y = average_home_value)) +
+  geom_col() +
+  labs(
+    title = "Average Home Value by Park Access",
+    x = "Park Access",
+    y = "Average Median Home Value"
+  ) +
+  theme_minimal()
 ```
+
+
+
+## 13. Scatterplot of income and home value
+```{r}
+#| label: income-home-value-scatter
+#| fig-cap: "Relationship between median household income and median home value."
+
+ggplot(analysis_data, aes(x = median_household_income, y = median_home_value)) +
+  geom_point() +
+  labs(
+    title = "Median Income and Median Home Value",
+    x = "Median Household Income",
+    y = "Median Home Value"
+  ) +
+  theme_minimal()
+```
+
+
+
+## 14. Regression models
+
+Model 1 looks at the relationship between park access and home value.
+
+Model 2 adds median household income as a control.
+
+```{r}
+#| label: regression-models
+
+model1 = lm(
+  median_home_value ~ near_park,
+  data = analysis_data
+)
+
+model2 = lm(
+  median_home_value ~ near_park + median_household_income,
+  data = analysis_data
+)
+
+summary(model1)
+
+summary(model2)
+```
+
+
+## 15. Simple regression table
+
+```{r}
+#| label: regression-table
+
+model1_results = as.data.frame(summary(model1)$coefficients)
+
+model2_results = as.data.frame(summary(model2)$coefficients)
+
+model1_results
+
+model2_results
+```
+
+
+
+## 16. Optional: income by park access
+
+This helps you explain whether park access overlaps with wealthier areas.
+
+```{r}
+#| label: income-by-park-access
+
+ggplot(summary_table, aes(x = near_park_text, y = average_income)) +
+  geom_col() +
+  labs(
+    title = "Average Income by Park Access",
+    x = "Park Access",
+    y = "Average Median Household Income"
+  ) +
+  theme_minimal()
+```
+
+
+## 17. Short conclusion code chunk
+
+This is not required, but it helps you quickly see your key results.
+
+
+```{r}
+#| label: key-results
+
+summary_table
+
+summary(model1)
+
+summary(model2)
+```
+
+
+
+### Note
+This project examines whether census tracts near Raleigh parks tend to have higher home values. The results show an association, not a causal relationship, because other neighborhood factors such as income, school quality, housing age, zoning, and location may also affect home values.
+
