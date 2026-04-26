@@ -53,5 +53,73 @@ head(income_raw)
 names(home_value_raw)
 names(income_raw)
 ```
+## 3. Clean ACS data
+
+This keeps only the columns we need: census tract ID, median home value, and median household income.
+
+
+```{r}
+#| label: clean-acs-data
+
+home_values_clean = home_value_raw |>
+  filter(GEO_ID != "Geography") |>
+  mutate(
+    GEOID = str_replace(GEO_ID, "1400000US", ""),
+    median_home_value = as.numeric(B25077_001E)
+  ) |>
+  filter(!is.na(median_home_value)) |>
+  select(GEOID, NAME, median_home_value)
+
+income_clean = income_raw |>
+  filter(GEO_ID != "Geography") |>
+  mutate(
+    GEOID = str_replace(GEO_ID, "1400000US", ""),
+    median_household_income = as.numeric(S1901_C01_012E)
+  ) |>
+  filter(!is.na(median_household_income)) |>
+  select(GEOID, median_household_income)
+
+acs_data = home_values_clean |>
+  left_join(income_clean, by = "GEOID")
+```
+
+## 4. Load census tract boundaries
+
+This gets Wake County census tract shapes so we can make maps and connect the ACS data to geography.
+
+```{r}
+#| label: load-tracts
+
+wake_tracts = tracts(
+  state = "NC",
+  county = "Wake",
+  year = 2024
+)
+
+wake_tracts = wake_tracts |>
+  st_transform(2264)
+
+raleigh_tracts = wake_tracts |>
+  left_join(acs_data, by = "GEOID")
+```
+## 5. Load Raleigh parks data
+
+Your parks CSV is separated by semicolons, so this uses `read.csv()` with `sep = ";"`.
+
+```r
+```{r}
+#| label: load-parks
+
+parks = read.csv(
+  here("data", "Parks_-7279106479596582801.csv"),
+  sep = ";"
+)
+
+head(parks)
+```
+
+
+
+
 ```{r}
 ```
