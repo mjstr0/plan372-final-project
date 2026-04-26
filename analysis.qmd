@@ -2,6 +2,7 @@
 title: "Parks, Greenways, and Home Values in Raleigh, North Carolina"
 author: "Megan Streicher"
 ---
+
 ## Introduction
 
 This project looks at the relationship between access to green space and home values in Raleigh, North Carolina.
@@ -22,6 +23,7 @@ options(tigris_use_cache = TRUE)
 ```
 
 ## Data
+
 ```{r}
 #| label: load-data
 #| message: false
@@ -52,10 +54,10 @@ head(income_raw)
 names(home_value_raw)
 names(income_raw)
 ```
+
 ## 3. Clean ACS data
 
 This keeps only the columns we need: census tract ID, median home value, and median household income.
-
 
 ```{r}
 home_values_clean = home_value_raw |>
@@ -97,6 +99,7 @@ wake_tracts = wake_tracts |>
 raleigh_tracts = wake_tracts |>
   left_join(acs_data, by = "GEOID")
 ```
+
 ## 5. Load Raleigh parks data
 
 Your parks CSV is separated by semicolons, so this uses `read.csv()` with `sep = ";"`.
@@ -132,7 +135,7 @@ parks_sf = parks_sf |>
   st_transform(2264)
 ```
 
----
+------------------------------------------------------------------------
 
 ## 7. Create a 1-mile park access measure
 
@@ -159,6 +162,7 @@ raleigh_tracts = raleigh_tracts |>
     )
   )
 ```
+
 ## 8. Check the final analysis data
 
 ```{r}
@@ -183,6 +187,7 @@ nrow(analysis_data)
 ```
 
 ## 9. Descriptive statistics table
+
 ```{r}
 #| label: descriptive-table
 
@@ -232,9 +237,7 @@ ggplot() +
   theme_minimal()
 ```
 
-
 ## 12. Bar chart comparing home values by park access
-
 
 ```{r}
 #| label: park-access-bar-chart
@@ -250,9 +253,8 @@ ggplot(summary_table, aes(x = near_park_text, y = average_home_value)) +
   theme_minimal()
 ```
 
-
-
 ## 13. Scatterplot of income and home value
+
 ```{r}
 #| label: income-home-value-scatter
 #| fig-cap: "Relationship between median household income and median home value."
@@ -266,8 +268,6 @@ ggplot(analysis_data, aes(x = median_household_income, y = median_home_value)) +
   ) +
   theme_minimal()
 ```
-
-
 
 ## 14. Regression models
 
@@ -293,7 +293,6 @@ summary(model1)
 summary(model2)
 ```
 
-
 ## 15. Simple regression table
 
 ```{r}
@@ -307,8 +306,6 @@ model1_results
 
 model2_results
 ```
-
-
 
 ## 16. Optional: income by park access
 
@@ -327,11 +324,9 @@ ggplot(summary_table, aes(x = near_park_text, y = average_income)) +
   theme_minimal()
 ```
 
-
 ## 17. Short conclusion code chunk
 
 This is not required, but it helps you quickly see your key results.
-
 
 ```{r}
 #| label: key-results
@@ -343,8 +338,6 @@ summary(model1)
 summary(model2)
 ```
 
-
-
 ### Note
-This project examines whether census tracts near Raleigh parks tend to have higher home values. The results show an association, not a causal relationship, because other neighborhood factors such as income, school quality, housing age, zoning, and location may also affect home values.
 
+This project examines whether census tracts near Raleigh parks tend to have higher home values. The results show an association, not a causal relationship, because other neighborhood factors such as income, school quality, housing age, zoning, and location may also affect home values.
