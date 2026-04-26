@@ -1,0 +1,26 @@
+---
+title: "Parks, Greenways, and Home Values in Raleigh, North Carolina"
+author: "Megan Streicher"
+---
+## Introduction
+
+This project looks at the relationship between access to green space and home values in Raleigh, North Carolina.
+
+```{r}
+#| label: setup
+#| message: false
+#| warning: false
+
+library(tidyverse)
+library(sf)
+library(tidycensus)
+library(tigris)
+library(here)
+
+options(tigris_use_cache = TRUE)
+```
+
+
+
+```{r}
+```
