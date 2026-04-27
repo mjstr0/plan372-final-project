@@ -318,6 +318,6 @@ ggplot(summary_table, aes(x = near_park_text, y = average_income)) +
 
 This project examines whether census tracts near Raleigh parks tend to have higher home values. The results show an association, not a causal relationship, because other neighborhood factors such as income, school quality, housing age, zoning, and location may also affect home values.
 
-## Ai Relfection
+## Ai Reflection
 
 I used AI to help me troubleshoot when I got stuck on errors in my code and needed help understanding what was going wrong. I also used it to brainstom the best way to present my research question and hypothesis, especially when deciding which figures and analysis steps were most relevant to my project.
