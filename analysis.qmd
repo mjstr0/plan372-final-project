@@ -29,13 +29,13 @@ options(tigris_use_cache = TRUE)
 #| message: false
 #| warning: false
 
-# Load ACS median home value data
+#load ACS median home value data
 home_value_raw = read_csv(here("data", "ACSDT5Y2024.B25077-Data.csv"))
 
-# Load ACS median household income data
+#load ACS median household income data
 income_raw = read_csv(here("data", "ACSST5Y2024.S1901-Data.csv"))
 
-# Load Wake County census tract boundaries
+#loads Wakes County census tract boundaries
 wake_tracts = tracts(
   state = "NC",
   county = "Wake",
@@ -43,16 +43,6 @@ wake_tracts = tracts(
   cb = TRUE
 ) |>
   st_transform(32119)
-```
-
-```{r}
-# Check the first few rows of each dataset
-head(home_value_raw)
-head(income_raw)
-
-# Check column names so we can identify the correct variables
-names(home_value_raw)
-names(income_raw)
 ```
 
 ## 3. Clean ACS data
@@ -64,10 +54,10 @@ home_values_clean = home_value_raw |>
   filter(GEO_ID != "Geography") |>
   mutate(
     GEOID = str_replace(GEO_ID, "1400000US", ""),
-    median_home_value = as.numeric(B25077_001E)
+    median_home_value = as.numeric(B25077_001E) #converting values to numeric
   ) |>
   filter(!is.na(median_home_value)) |>
-  select(GEOID, NAME, median_home_value)
+  select(GEOID, NAME, median_home_value) #keeping only columns needed
 
 income_clean = income_raw |>
   filter(GEO_ID != "Geography") |>
@@ -97,7 +87,7 @@ wake_tracts = wake_tracts |>
   st_transform(2264)
 
 raleigh_tracts = wake_tracts |>
-  left_join(acs_data, by = "GEOID")
+  left_join(acs_data, by = "GEOID") #joins them with the cleaned ASC data
 ```
 
 ## 5. Load Raleigh parks data
@@ -135,7 +125,6 @@ parks_sf = parks_sf |>
   st_transform(2264)
 ```
 
-------------------------------------------------------------------------
 
 ## 7. Create a 1-mile park access measure
 
@@ -150,7 +139,7 @@ parks_buffer = parks_sf |>
 raleigh_tracts$near_park = apply(
   st_intersects(raleigh_tracts, parks_buffer),
   1,
-  any
+  any #checks which census tracts intersect those buffers.
 )
 
 raleigh_tracts = raleigh_tracts |>
@@ -167,7 +156,7 @@ raleigh_tracts = raleigh_tracts |>
 
 ```{r}
 
-analysis_data = raleigh_tracts |>
+analysis_data = raleigh_tracts |> # non-spatial dataset 
   st_drop_geometry() |>
   select(
     GEOID,
@@ -178,7 +167,7 @@ analysis_data = raleigh_tracts |>
     near_park_text
   ) |>
   filter(!is.na(median_home_value)) |>
-  filter(!is.na(median_household_income))
+  filter(!is.na(median_household_income)) #remove rows with missing home value or income
 
 head(analysis_data)
 
@@ -189,7 +178,6 @@ nrow(analysis_data)
 ## 9. Descriptive statistics table
 
 ```{r}
-#| label: descriptive-table
 
 summary_table = analysis_data |>
   group_by(near_park_text) |>
@@ -204,7 +192,8 @@ summary_table
 
 ## 10. Map of median home values
 
-```{r}
+```{r} 
+#show whether higher or lower home values appear near park locations.
 #| label: home-value-map
 #| fig-cap: "Median home values by census tract in Wake County, North Carolina."
 
@@ -223,7 +212,6 @@ ggplot() +
 ## 11. Map of tracts within 1 mile of a park
 
 ```{r}
-#| label: park-access-map
 #| fig-cap: "Census tracts classified by whether they are within one mile of a Raleigh park."
 
 ggplot() +
@@ -277,6 +265,7 @@ Model 2 adds median household income as a control.
 
 ```{r}
 #| label: regression-models
+#test whether being near a park is related to median home value
 
 model1 = lm(
   median_home_value ~ near_park,
@@ -298,7 +287,7 @@ summary(model2)
 ```{r}
 #| label: regression-table
 
-model1_results = as.data.frame(summary(model1)$coefficients)
+model1_results = as.data.frame(summary(model1)$coefficients) #turns into dataframe
 
 model2_results = as.data.frame(summary(model2)$coefficients)
 
@@ -307,7 +296,7 @@ model1_results
 model2_results
 ```
 
-## 16. Optional: income by park access
+## 16. Income by park access
 
 This helps you explain whether park access overlaps with wealthier areas.
 
@@ -315,7 +304,7 @@ This helps you explain whether park access overlaps with wealthier areas.
 #| label: income-by-park-access
 
 ggplot(summary_table, aes(x = near_park_text, y = average_income)) +
-  geom_col() +
+  geom_col() + #bar chart for avg income and dist from parks
   labs(
     title = "Average Income by Park Access",
     x = "Park Access",
@@ -324,20 +313,11 @@ ggplot(summary_table, aes(x = near_park_text, y = average_income)) +
   theme_minimal()
 ```
 
-## 17. Short conclusion code chunk
 
-This is not required, but it helps you quickly see your key results.
-
-```{r}
-#| label: key-results
-
-summary_table
-
-summary(model1)
-
-summary(model2)
-```
-
-### Note
+## Note
 
 This project examines whether census tracts near Raleigh parks tend to have higher home values. The results show an association, not a causal relationship, because other neighborhood factors such as income, school quality, housing age, zoning, and location may also affect home values.
+
+## Ai Relfection
+
+I used AI to help me troubleshoot when I got stuck on errors in my code and needed help understanding what was going wrong. I also used it to brainstom the best way to present my research question and hypothesis, especially when deciding which figures and analysis steps were most relevant to my project.
